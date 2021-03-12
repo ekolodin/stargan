@@ -1,13 +1,13 @@
-from torch.utils import data
-from torchvision import transforms as T
-from torchvision.datasets import ImageFolder
-from PIL import Image
-import torch
 import os
+import torch
 import random
 
+from PIL import Image
+from torchvision import transforms as T
+from torch.utils.data import Dataset, DataLoader
 
-class CelebA(data.Dataset):
+
+class CelebA(Dataset):
     """Dataset class for the CelebA dataset."""
 
     def __init__(self, image_dir, attr_path, selected_attrs, transform, mode):
@@ -49,7 +49,7 @@ class CelebA(data.Dataset):
                 idx = self.attr2idx[attr_name]
                 label.append(values[idx] == '1')
 
-            if (i+1) < 2000:
+            if (i + 1) < 2000:
                 self.test_dataset.append([filename, label])
             else:
                 self.train_dataset.append([filename, label])
@@ -68,8 +68,7 @@ class CelebA(data.Dataset):
         return self.num_images
 
 
-def get_loader(image_dir, attr_path, selected_attrs, crop_size=178, image_size=128, 
-               batch_size=16, dataset='CelebA', mode='train', num_workers=1):
+def get_loader(image_dir, attr_path, selected_attrs, crop_size=178, image_size=128, batch_size=16, mode='train'):
     """Build and return a data loader."""
     transform = []
     if mode == 'train':
@@ -80,13 +79,6 @@ def get_loader(image_dir, attr_path, selected_attrs, crop_size=178, image_size=1
     transform.append(T.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)))
     transform = T.Compose(transform)
 
-    if dataset == 'CelebA':
-        dataset = CelebA(image_dir, attr_path, selected_attrs, transform, mode)
-    elif dataset == 'RaFD':
-        dataset = ImageFolder(image_dir, transform)
+    dataset = CelebA(image_dir, attr_path, selected_attrs, transform, mode)
 
-    data_loader = data.DataLoader(dataset=dataset,
-                                  batch_size=batch_size,
-                                  shuffle=(mode=='train'),
-                                  num_workers=num_workers)
-    return data_loader
+    return DataLoader(dataset=dataset, batch_size=batch_size, shuffle=(mode == 'train'), num_workers=8)
